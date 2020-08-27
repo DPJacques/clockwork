@@ -281,34 +281,28 @@ func (fc *fakeClock) NewTicker(d time.Duration) Ticker {
 	return ft
 }
 
+// set sets the fakeClock and notifies sleepers and blockers before returning.
+// The caller must hold fc.l for the duration.
+func (fc *fakeClock) set(t time.Time) {
+	fc.sleepers = notifySleepers(fc.sleepers, t)
+	fc.blockers = notifyBlockers(fc.blockers, len(fc.sleepers))
+	fc.time = t
+}
+
 // Advance advances fakeClock to a new point in time, ensuring channels from any
 // previous invocations of After are notified appropriately before returning
 func (fc *fakeClock) Advance(d time.Duration) {
 	fc.l.Lock()
 	defer fc.l.Unlock()
-	end := fc.time.Add(d)
-
-	fc.sleepers = notifySleepers(fc.sleepers, end)
-	fc.blockers = notifyBlockers(fc.blockers, len(fc.sleepers))
-	fc.time = end
+	fc.set(fc.time.Add(d))
 }
 
-// Set sets the FakeClock to a new point in time.
-// if it's advance then the function ensures that any existing sleepers are
-// notified appropriately before returning. Otherwise no notification will be
-// done.
+// Set sets the FakeClock to a new point in time, ensuring channels from any
+// previous invocations of After are notified appropriately before returning
 func (fc *fakeClock) Set(t time.Time) {
 	fc.l.Lock()
 	defer fc.l.Unlock()
-
-	if fc.time.After(t) {
-		fc.time = t
-		return
-	}
-
-	fc.sleepers = notifySleepers(fc.sleepers, t)
-	fc.blockers = notifyBlockers(fc.blockers, len(fc.sleepers))
-	fc.time = t
+	fc.set(t)
 }
 
 // BlockUntil will block until the fakeClock has the given number of sleepers
