@@ -240,6 +240,19 @@ func notifyBlockers(blockers []*blocker, count int) (newBlockers []*blocker) {
 	return
 }
 
+// notifySleepers finds and notifies all the sleepers waiting until time t.
+func notifySleepers(sleepers []*sleeper, t time.Time) []*sleeper {
+	var newSleepers []*sleeper
+	for _, s := range sleepers {
+		if t.Sub(s.until) >= 0 {
+			s.awaken(t)
+		} else {
+			newSleepers = append(newSleepers, s)
+		}
+	}
+	return newSleepers
+}
+
 // Sleep blocks until the given duration has passed on the fakeClock
 func (fc *fakeClock) Sleep(d time.Duration) {
 	<-fc.After(d)
@@ -266,19 +279,6 @@ func (fc *fakeClock) NewTicker(d time.Duration) Ticker {
 	}
 	go ft.tick()
 	return ft
-}
-
-// notifySleepers finds and notifies all the sleepers waiting until time t.
-func notifySleepers(sleepers []*sleeper, t time.Time) []*sleeper {
-	var newSleepers []*sleeper
-	for _, s := range sleepers {
-		if t.Sub(s.until) >= 0 {
-			s.awaken(t)
-		} else {
-			newSleepers = append(newSleepers, s)
-		}
-	}
-	return newSleepers
 }
 
 // Advance advances fakeClock to a new point in time, ensuring channels from any
