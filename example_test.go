@@ -10,7 +10,7 @@ import (
 // injected clock
 func myFunc(clock Clock, i *int) {
 	clock.Sleep(3 * time.Second)
-	*i += 1
+	*i++
 }
 
 // assertState is an example of a state assertion in a test
